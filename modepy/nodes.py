@@ -365,6 +365,103 @@ def legendre_gauss_lobatto_tensor_product_nodes(dims, n):
 # }}}
 
 
+# {{{ Padua nodes
+
+def _first_padua_jacobi_nodes(alpha, beta, order):
+    from modepy.quadrature.jacobi_gauss import jacobi_gauss_lobatto_nodes
+    mu = jacobi_gauss_lobatto_nodes(alpha, beta, order)[::-1]
+    eta = jacobi_gauss_lobatto_nodes(alpha, beta, order + 1)[::-1]
+
+    nodes = np.stack(np.meshgrid(mu, eta))
+    return np.hstack([
+        nodes[:, ::2, 1::2].reshape(2, -1),
+        nodes[:, 1::2, ::2].reshape(2, -1)
+        ])
+
+
+def _second_padua_jacobi_nodes(alpha, beta, order):
+    rot = np.array([
+        [np.cos(np.pi/2), -np.sin(np.pi/2)],
+        [np.sin(np.pi/2), np.cos(np.pi/2)],
+        ])
+    if order % 2 == 0:
+        rot = -rot
+
+    nodes = _first_padua_jacobi_nodes(alpha, beta, order)
+    return rot @ nodes
+
+
+def _third_padua_jacobi_nodes(alpha, beta, order):
+    rot = np.array([
+        [np.cos(np.pi), -np.sin(np.pi)],
+        [np.sin(np.pi), np.cos(np.pi)],
+        ])
+
+    nodes = _first_padua_jacobi_nodes(alpha, beta, order)
+    return rot @ nodes
+
+
+def _fourth_padua_jacobi_nodes(alpha, beta, order):
+    rot = np.array([
+        [np.cos(np.pi/2), -np.sin(np.pi/2)],
+        [np.sin(np.pi/2), np.cos(np.pi/2)],
+        ])
+    if order % 2 == 1:
+        rot = -rot
+
+    nodes = _first_padua_jacobi_nodes(alpha, beta, order)
+    return rot @ nodes
+
+
+def padua_jacobi_nodes(alpha, beta, order, family="first"):
+    r"""Generalized Padua-Jacobi nodes.
+
+    The Padua-Jacobi nodes are constructed from an interlaced grid of
+    standard Jacobi-Gauss-Lobatto nodes, making use of
+    :func:`~modepy.quadrature.jacobi_gauss.jacobi_gauss_lobatto_nodes`.
+    This construction is detailed in
+
+        M. Briani, A. Sommariva, M. Vianello,
+        *Computing Fekete and Lebesgue Points: Simplex, Square, Disk*,
+        Journal of Computational and Applied Mathematics, Vol. 236,
+        pp. 2477--2486, 2012, `DOI <http://dx.doi.org/10.1016/j.cam.2011.12.006>`_.
+
+    The values of the parameters :math:`(\alpha, \beta)` can have an effect
+    on the Lebesgue constant of the resulting set, but all of them have
+    optimal growth of :math:`\mathcal{O}(\log^2 n)`.
+
+    The Padua-Jacobi nodes are not rotationally symmetric.
+
+    :arg family: one of the four families of Padua-Jacobi nodes. The three
+        additional families are :math:`90^\circ` rotations of the first one.
+    """
+
+    if family == "first":
+        nodes = _first_padua_jacobi_nodes(alpha, beta, order)
+    elif family == "second":
+        nodes = _second_padua_jacobi_nodes(alpha, beta, order)
+    elif family == "third":
+        nodes = _third_padua_jacobi_nodes(alpha, beta, order)
+    elif family == "fourth":
+        nodes = _fourth_padua_jacobi_nodes(alpha, beta, order)
+    else:
+        raise ValueError(f"unknown Padua-Jacobi node family: '{family}'")
+
+    return nodes
+
+
+def padua_nodes(order, family="first"):
+    r"""Standard Padua nodes.
+
+    Padua nodes are Padua-Jacobi nodes with :math:`\alpha = \beta = -0.5`,
+    i.e. they are constructed from the Chebyshev-Gauss-Lobatto nodes.
+    """
+
+    return padua_jacobi_nodes(-0.5, -0.5, order, family=family)
+
+# }}}
+
+
 # {{{ space-based interface
 
 @singledispatch
