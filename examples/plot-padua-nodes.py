@@ -40,7 +40,9 @@ def plot_padua_nodes(alpha, beta, order, family):
     ax.grid()
 
     ax.plot(curve[0], curve[1])
-    ax.plot(nodes[0], nodes[1], "ko")
+    for i, xi in enumerate(nodes.T):
+        ax.plot(nodes[0], nodes[1], "ko", markersize=8)
+        ax.text(*xi, str(i), color="k", fontsize=24, fontweight="bold")
 
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])

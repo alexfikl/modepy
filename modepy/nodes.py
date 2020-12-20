@@ -370,50 +370,44 @@ def legendre_gauss_lobatto_tensor_product_nodes(dims, n):
 
 # {{{ Padua nodes
 
-def _first_padua_jacobi_nodes(alpha, beta, order):
+def _make_padua_grid_nodes(alpha, beta, order):
     from modepy.quadrature.jacobi_gauss import jacobi_gauss_lobatto_nodes
-    mu = jacobi_gauss_lobatto_nodes(alpha, beta, order)[::-1]
-    eta = jacobi_gauss_lobatto_nodes(alpha, beta, order + 1)[::-1]
+    mu = jacobi_gauss_lobatto_nodes(alpha, beta, order)
+    eta = jacobi_gauss_lobatto_nodes(alpha, beta, order + 1)
 
-    nodes = np.stack(np.meshgrid(mu, eta))
-    return np.hstack([
-        nodes[:, ::2, 1::2].reshape(2, -1),
-        nodes[:, 1::2, ::2].reshape(2, -1)
-        ])
+    return mu, eta
+
+
+def _make_padua_jacobi_nodes(mu, eta, odd_or_even):
+    nodes = np.stack(np.meshgrid(mu, eta, indexing="ij"))
+    indices = np.sum(
+            np.meshgrid(np.arange(mu.size), np.arange(eta.size), indexing="ij"),
+            axis=0)
+
+    return nodes[:, indices % 2 == odd_or_even].reshape(2, -1)
+
+
+def _first_padua_jacobi_nodes(alpha, beta, order):
+    mu, eta = _make_padua_grid_nodes(alpha, beta, order)
+    return _make_padua_jacobi_nodes(mu, eta, 0)
 
 
 def _second_padua_jacobi_nodes(alpha, beta, order):
-    rot = np.array([
-        [np.cos(np.pi/2), -np.sin(np.pi/2)],
-        [np.sin(np.pi/2), np.cos(np.pi/2)],
-        ])
-    if order % 2 == 0:
-        rot = -rot
-
-    nodes = _first_padua_jacobi_nodes(alpha, beta, order)
-    return rot @ nodes
+    # NOTE: these are just "rotated" by pi/2 from the first family
+    mu, eta = _make_padua_grid_nodes(alpha, beta, order)
+    return _make_padua_jacobi_nodes(eta, mu, 0)
 
 
 def _third_padua_jacobi_nodes(alpha, beta, order):
-    rot = np.array([
-        [np.cos(np.pi), -np.sin(np.pi)],
-        [np.sin(np.pi), np.cos(np.pi)],
-        ])
-
-    nodes = _first_padua_jacobi_nodes(alpha, beta, order)
-    return rot @ nodes
+    # NOTE: these are just "rotated" by pi from the first family
+    mu, eta = _make_padua_grid_nodes(alpha, beta, order)
+    return _make_padua_jacobi_nodes(mu, eta, 1)
 
 
 def _fourth_padua_jacobi_nodes(alpha, beta, order):
-    rot = np.array([
-        [np.cos(np.pi/2), -np.sin(np.pi/2)],
-        [np.sin(np.pi/2), np.cos(np.pi/2)],
-        ])
-    if order % 2 == 1:
-        rot = -rot
-
-    nodes = _first_padua_jacobi_nodes(alpha, beta, order)
-    return rot @ nodes
+    # NOTE: these are just "rotated" by 2 pi/3 from the first family
+    mu, eta = _make_padua_grid_nodes(alpha, beta, order)
+    return _make_padua_jacobi_nodes(eta, mu, 1)
 
 
 def padua_jacobi_nodes(alpha, beta, order, family="first"):
