@@ -27,6 +27,9 @@ Hypercubes
 
 .. autofunction:: tensor_product_nodes
 .. autofunction:: legendre_gauss_lobatto_tensor_product_nodes
+
+.. autofunction:: padua_jacobi_nodes
+.. autofunction:: padua_nodes
 """
 
 __copyright__ = "Copyright (C) 2009, 2010, 2013 Andreas Kloeckner, " \
