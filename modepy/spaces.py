@@ -33,6 +33,9 @@ THE SOFTWARE.
 """
 
 from functools import singledispatch
+from numbers import Number
+from typing import Union, Tuple
+
 from modepy.shapes import Shape, Simplex, Hypercube
 
 
@@ -114,26 +117,35 @@ def _space_for_simplex(shape: Simplex, order: int):
 
 class QN(FunctionSpace):
     r"""The function space of polynomials with maximum degree
-    :math:`N` = :attr:`order`:
+    :math:`N_i` = :attr:`order`:
 
     .. math::
 
-        Q^N:=\operatorname{span}
-        \left \{\prod_{i=1}^d x_i^{n_i}:\max n_i\le N\right\}.
+        Q^N := \operatorname{span} \left\{
+            \prod_{i=1}^d x_i^{n_i}: \max n_i \le N_i
+            \right\}.
 
     .. attribute:: order
+
+        A tuple of orders for each spatial dimension.
 
     .. automethod:: __init__
     """
 
-    def __init__(self, spatial_dim: int, order: int) -> None:
+    def __init__(self, spatial_dim: int, order: Union[int, Tuple[int, ...]]) -> None:
         super().__init__()
+        if isinstance(order, Number):
+            order = (order,) * spatial_dim
+        else:
+            assert len(order) == spatial_dim
+
         self.spatial_dim = spatial_dim
         self.order = order
 
     @property
     def space_dim(self) -> int:
-        return (self.order + 1)**self.spatial_dim
+        import math
+        return math.prod(o + 1 for o in self.order)
 
     def __repr__(self) -> str:
         return (f"{type(self).__name__}("
@@ -142,7 +154,7 @@ class QN(FunctionSpace):
 
 
 @space_for_shape.register(Hypercube)
-def _space_for_hypercube(shape: Hypercube, order: int):
+def _space_for_hypercube(shape: Hypercube, order: Union[int, Tuple[int, ...]]):
     return QN(shape.dim, order)
 
 # }}}

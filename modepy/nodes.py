@@ -477,10 +477,9 @@ def _random_nodes_for_simplex(shape: Simplex, nnodes: int, rng=None):
 
 @node_tuples_for_space.register(QN)
 def _node_tuples_for_qn(space: QN):
-    from pytools import \
-            generate_nonnegative_integer_tuples_below as gnitb
+    from pytools import generate_nonnegative_integer_tuples_below as gnitb
     return tuple([
-        tp[::-1] for tp in gnitb(space.order + 1, space.spatial_dim)
+        tp[::-1] for tp in gnitb([o + 1 for o in space.order])
         ])
 
 
@@ -494,8 +493,9 @@ def _equispaced_nodes_for_qn(space: QN, shape: Hypercube):
     if space.order == 0:
         return np.array(node_tuples_for_space(space), dtype=np.float64).T
     else:
-        return (np.array(node_tuples_for_space(space), dtype=np.float64)
-                / space.order*2 - 1).T
+        return (
+                np.array(node_tuples_for_space(space), dtype=np.float64)
+                / np.array(space.order)[::-1] * 2 - 1).T
 
 
 @edge_clustered_nodes_for_space.register(QN)
@@ -505,8 +505,10 @@ def _edge_clustered_nodes_for_qn(space: QN, shape: Hypercube):
     if space.spatial_dim != shape.dim:
         raise ValueError("spatial dimensions of shape and space must match")
 
-    return legendre_gauss_lobatto_tensor_product_nodes(
-            space.spatial_dim, space.order)
+    from modepy.quadrature.jacobi_gauss import legendre_gauss_lobatto_nodes
+    return tensor_product_nodes([
+        legendre_gauss_lobatto_nodes(o) for o in space.order
+        ])
 
 
 @random_nodes_for_shape.register(Hypercube)

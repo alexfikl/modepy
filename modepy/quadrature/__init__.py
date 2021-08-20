@@ -31,6 +31,7 @@ THE SOFTWARE.
 """
 
 from functools import singledispatch
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from modepy.shapes import Shape, Simplex, Hypercube
@@ -70,7 +71,10 @@ class Quadrature:
     .. automethod:: __call__
     """
 
-    def __init__(self, nodes, weights, exact_to=None):
+    def __init__(self,
+            nodes: np.ndarray,
+            weights: np.ndarray, *,
+            exact_to: Optional[int] = None) -> None:
         """
         :arg nodes: an array of shape *(d, nnodes)*, where *d* is the dimension
             of the qudrature rule.
@@ -86,7 +90,7 @@ class Quadrature:
         if exact_to is not None:
             self.exact_to = exact_to
 
-    def __call__(self, f):
+    def __call__(self, f: Callable[[np.ndarray], np.ndarray]) -> float:
         """Evaluate the callable *f* at the quadrature nodes and return its
         integral.
 
@@ -102,7 +106,7 @@ class ZeroDimensionalQuadrature(Quadrature):
     Inherits from :class:`Quadrature`.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(np.empty((0, 1), dtype=np.float64),
                          np.ones((1,), dtype=np.float64),
                          exact_to=np.inf)
@@ -111,10 +115,11 @@ class ZeroDimensionalQuadrature(Quadrature):
 class Transformed1DQuadrature(Quadrature):
     """A quadrature rule on an arbitrary interval :math:`(a, b)`."""
 
-    def __init__(self, quad, left, right):
+    def __init__(self, quad: Quadrature, left: float, right: float) -> None:
         """Transform a given 1D quadrature rule *quad* onto the
-        interval (left, right).
+        interval (left, right) from the standard :math:`[-1, 1]`.
         """
+
         self.left = left
         self.right = right
 
@@ -132,7 +137,7 @@ class TensorProductQuadrature(Quadrature):
     .. automethod:: __init__
     """
 
-    def __init__(self, quads):
+    def __init__(self, quads: Sequence[Quadrature]) -> None:
         """
         :arg quad: a :class:`tuple` of :class:`Quadrature` for one-dimensional
             intervals, one for each dimension of the tensor product.
@@ -153,9 +158,22 @@ class TensorProductQuadrature(Quadrature):
 
 
 class LegendreGaussTensorProductQuadrature(TensorProductQuadrature):
-    def __init__(self, N, dims, backend=None):      # noqa: N803
+    def __init__(self,
+            N: Union[int, Tuple[int, ...]], dims: int,      # noqa: N803
+            backend: Optional[str] = None) -> None:
+        """
+        :param N: the order of the Legendre-Gauss quadrature rule in each
+            dimension up to *dims*. If a single number if given, then the
+            same order is used in all dimensions.
+        """
+        from numbers import Number
+        if isinstance(N, Number):
+            N = (N,) * dims                                 # noqa: N806
+        else:
+            assert len(N) == dims
+
         from modepy.quadrature.jacobi_gauss import LegendreGaussQuadrature
-        super().__init__([LegendreGaussQuadrature(N, backend=backend)] * dims)
+        super().__init__([LegendreGaussQuadrature(n, backend=backend) for n in N])
 
 
 # {{{ quadrature
@@ -202,7 +220,7 @@ def _quadrature_for_qn(space: QN, shape: Hypercube):
     else:
         quad = LegendreGaussTensorProductQuadrature(space.order, space.spatial_dim)
 
-    assert quad.exact_to >= space.order
+    assert all(quad.exact_to >= o for o in space.order)
     return quad
 
 # }}}

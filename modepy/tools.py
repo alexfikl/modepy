@@ -258,6 +258,7 @@ def hypercube_submesh(node_tuples):
 
 
 # {{{ plotting helpers
+
 def plot_element_values(n, nodes, values, resample_n=None,
         node_tuples=None, show_nodes=False):
     dims = len(nodes)
@@ -300,17 +301,21 @@ def plot_element_values(n, nodes, values, resample_n=None,
 # {{{ lebesgue constant
 
 def _evaluate_lebesgue_function(n, nodes, shape):
-    huge_n = 30*n
+    from numbers import Number
+    if isinstance(n, Number):
+        huge_n = 30*n
+    else:
+        huge_n = tuple([30 * ni for ni in n])
 
     from modepy.spaces import space_for_shape
     from modepy.modes import basis_for_space
-    from modepy.nodes import node_tuples_for_space
+    from modepy.nodes import node_tuples_for_space, equispaced_nodes_for_space
     space = space_for_shape(shape, n)
     huge_space = space_for_shape(shape, huge_n)
 
     basis = basis_for_space(space, shape)
     equi_node_tuples = node_tuples_for_space(huge_space)
-    equi_nodes = (np.array(equi_node_tuples, dtype=np.float64)/huge_n*2 - 1).T
+    equi_nodes = equispaced_nodes_for_space(space, shape)
 
     from modepy.matrices import vandermonde
     vdm = vandermonde(basis.functions, nodes)

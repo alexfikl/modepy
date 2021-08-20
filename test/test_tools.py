@@ -363,6 +363,38 @@ def test_nodal_mass_matrix_for_face(dims, shape_cls, order=3):
 # }}}
 
 
+# {{{ test_tensor_product_resampling
+
+@pytest.mark.parametrize("dims", [1, 2, 3])
+def test_tensor_product_resampling(dims):
+    shape = mp.Hypercube(dims)
+
+    space_0 = mp.space_for_shape(shape, (5,) + (5,) * (dims - 1))
+    nodes_0 = mp.edge_clustered_nodes_for_space(space_0, shape)
+    basis_0 = mp.basis_for_space(space_0, shape).functions
+
+    space_1 = mp.space_for_shape(shape, (3,) + (4,) * (dims - 1))
+    nodes_1 = mp.edge_clustered_nodes_for_space(space_1, shape)
+    basis_1 = mp.basis_for_space(space_1, shape).functions
+
+    from_mat = mp.resampling_matrix(basis_0, nodes_1, nodes_0)
+    to_mat = mp.resampling_matrix(basis_1, nodes_0, nodes_1)
+
+    error = la.norm(to_mat @ from_mat - np.eye(to_mat.shape[0]))
+    # assert error < 1.0e-13, error
+
+    error = la.norm(from_mat @ to_mat - np.eye(to_mat.shape[1]))
+    assert error < 1.0e-13, error
+
+    nodes_0_resampled = to_mat @ nodes_1[0]
+    print(la.norm(nodes_0_resampled - nodes_0[0]))
+
+    nodes_1_resampled = from_mat @ nodes_0[0]
+    print(la.norm(nodes_1_resampled - nodes_1[0]))
+
+# }}}
+
+
 # {{{ test_estimate_lebesgue_constant
 
 @pytest.mark.parametrize("dims", [1, 2])

@@ -1029,8 +1029,8 @@ class TensorProductBasis(Basis):
     def functions(self):
         return tuple(
                 _TensorProductBasisFunction(mid,
-                    [self._bases_1d[iaxis][mid_i]
-                        for iaxis, mid_i in enumerate(mid)])
+                    [self._bases_1d[iaxis][imid]
+                        for iaxis, imid in enumerate(mid)])
                 for mid in self.mode_ids)
 
     @property
@@ -1039,8 +1039,8 @@ class TensorProductBasis(Basis):
         func = (self._bases_1d, self._grad_bases_1d)
         return tuple(
                 _TensorProductGradientBasisFunction(mid, [
-                    [func[is_deriv][iaxis][mid_i]
-                        for iaxis, (is_deriv, mid_i) in
+                    [func[is_deriv][iaxis][imid]
+                        for iaxis, (is_deriv, imid) in
                         enumerate(zip(iderivative, mid))]
                     for iderivative in wandering_element(self._dim)
                     ])
@@ -1052,15 +1052,14 @@ def _orthonormal_basis_for_qn(space: QN, shape: Hypercube):
     if not isinstance(shape, Hypercube):
         raise NotImplementedError((type(space).__name__, type(shape).__name__))
 
-    order = space.order
-    dim = space.spatial_dim
-    return TensorProductBasis(
-            # NOTE: https://github.com/python/mypy/issues/1484
-            [[partial(jacobi, 0, 0, n)              # type: ignore[misc]
-                for n in range(order + 1)]] * dim,
-            [[partial(grad_jacobi, 0, 0, n)         # type: ignore[misc]
-                for n in range(order + 1)]] * dim,
-            orth_weight=1)
+    return TensorProductBasis([
+        # NOTE: https://github.com/python/mypy/issues/1484
+        [partial(jacobi, 0, 0, n) for n in range(o + 1)]        # type: ignore[misc]
+        for o in reversed(space.order)
+        ], [
+        [partial(grad_jacobi, 0, 0, n) for n in range(o + 1)]   # type: ignore[misc]
+        for o in reversed(space.order)
+        ], orth_weight=1)
 
 
 @basis_for_space.register(QN)
@@ -1087,12 +1086,13 @@ def _monomial_basis_for_qn(space: QN, shape: Hypercube):
     if not isinstance(shape, Hypercube):
         raise NotImplementedError((type(space).__name__, type(shape).__name__))
 
-    order = space.order
-    dim = space.spatial_dim
-    return TensorProductBasis(
-            [[partial(_monomial_1d, n) for n in range(order + 1)]] * dim,
-            [[partial(_grad_monomial_1d, n) for n in range(order + 1)]] * dim,
-            orth_weight=None)
+    return TensorProductBasis([
+        [partial(_monomial_1d, n) for n in range(o + 1)]
+        for o in reversed(space.order)
+        ], [
+        [partial(_grad_monomial_1d, n) for n in range(o + 1)]
+        for o in reversed(space.order)
+        ], orth_weight=None)
 
 # }}}
 
